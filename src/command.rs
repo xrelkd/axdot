@@ -1,0 +1,104 @@
+use std::path::PathBuf;
+
+use structopt::{clap::Shell, StructOpt};
+
+use crate::config::Config;
+use crate::context::Context;
+use crate::error::Error;
+use crate::manager::Manager;
+
+#[derive(Debug, StructOpt)]
+pub struct Command {
+    #[structopt(subcommand)]
+    subcommand: SubCommand,
+}
+
+impl Command {
+    #[inline]
+    pub fn app_name() -> String {
+        Command::clap().get_name().to_owned()
+    }
+
+    pub fn run(self) -> Result<(), Error> {
+        let context =
+            if self.subcommand.is_standalone() { None } else { Some(Context::from_env()?) };
+        self.subcommand.run(context)
+    }
+}
+
+#[derive(Debug, StructOpt)]
+pub enum SubCommand {
+    /// Shows current version
+    Version,
+
+    /// Shows shell completions
+    Completions { shell: Shell },
+
+    /// Generates empty configuration
+    Init,
+
+    /// Applies from configuration file
+    Apply {
+        #[structopt(long = "config")]
+        config: Option<PathBuf>,
+
+        #[structopt(long = "replace", short = "r")]
+        /// replaces files/folders if they already exist
+        replace: bool,
+    },
+
+    /// Shows what would be applied
+    DryApply {
+        #[structopt(long = "config")]
+        config: Option<PathBuf>,
+
+        #[structopt(long = "replace", short = "r")]
+        /// replaces files/folders if they already exist
+        replace: bool,
+    },
+}
+
+impl SubCommand {
+    #[inline]
+    pub fn is_standalone(&self) -> bool {
+        match self {
+            SubCommand::Version | SubCommand::Completions { .. } => true,
+            _ => false,
+        }
+    }
+
+    fn create_manager(config: Option<PathBuf>) -> Result<Manager, Error> {
+        let config_file = config.unwrap_or(PathBuf::from(format!("{}.yaml", Command::app_name())));
+        Ok(Config::from_file(config_file)?.into())
+    }
+
+    pub fn run(self, context: Option<Context>) -> Result<(), Error> {
+        match (self, context) {
+            (SubCommand::Version, _) => {
+                Command::clap()
+                    .write_version(&mut std::io::stdout())
+                    .expect("failed to print version");
+                Ok(())
+            }
+            (SubCommand::Completions { shell }, _) => {
+                let app_name = Command::app_name();
+                Command::clap().gen_completions_to(app_name, shell, &mut std::io::stdout());
+                Ok(())
+            }
+            (SubCommand::Init, _) => {
+                let config = Config::default();
+                println!("{}", serde_yaml::to_string(&config)?);
+                Ok(())
+            }
+            (SubCommand::Apply { replace, config }, Some(context)) => {
+                let manager = Self::create_manager(config)?;
+                manager.apply(false, replace, &context)
+            }
+            (SubCommand::DryApply { replace, config }, Some(context)) => {
+                let manager = Self::create_manager(config)?;
+                manager.apply(true, replace, &context)
+            }
+            (_, None) => Ok(()),
+        }
+    }
+}
