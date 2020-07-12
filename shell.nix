@@ -1,7 +1,10 @@
-with import <nixpkgs> {};
+with import <nixpkgs> { };
+
 stdenv.mkDerivation {
-  name = "dev";
-  buildInputs = [ rustup ];
+  name = "axdot-dev";
+
+  RUST_BACKTRACE = 1;
+
+  nativeBuildInputs = [ rustup cargo-make ];
+
 }
-
-
