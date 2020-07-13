@@ -19,15 +19,11 @@ impl Context {
             Err(_) => return Err(Error::EnvHomeNotFound),
         };
 
-        Ok(Context {
-            user_name,
-            home_dir,
-        })
+        Ok(Context { user_name, home_dir })
     }
 
     pub fn apply(&self, s: &str) -> String {
-        s.replace("$USER", &self.user_name)
-            .replace("$HOME", &self.home_dir)
+        s.replace("$USER", &self.user_name).replace("$HOME", &self.home_dir)
     }
 
     pub fn apply_path<P: AsRef<Path>>(&self, path: P) -> PathBuf {
