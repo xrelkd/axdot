@@ -25,32 +25,38 @@ impl Command {
 
 #[derive(Debug, StructOpt)]
 pub enum SubCommand {
-    /// Shows current version
+    #[structopt(about = "Shows current version")]
     Version,
 
-    /// Shows shell completions
+    #[structopt(about = "Shows shell completions")]
     Completions { shell: Shell },
 
-    /// Generates empty configuration
+    #[structopt(about = "Generates empty configuration")]
     Init,
 
-    /// Applies from configuration file
+    #[structopt(about = "Applies from configuration file")]
     Apply {
-        #[structopt(long = "config")]
+        #[structopt(long = "config", help = "Configuration file path")]
         config: Option<PathBuf>,
 
-        #[structopt(long = "replace", short = "r")]
-        /// replaces files/folders if they already exist
+        #[structopt(
+            long = "replace",
+            short = "r",
+            help = "Replaces files/folders if they already exist"
+        )]
         replace: bool,
     },
 
-    /// Shows what would be applied
+    #[structopt(about = "Shows what would be applied")]
     DryApply {
-        #[structopt(long = "config")]
+        #[structopt(long = "config", help = "Configuration file path")]
         config: Option<PathBuf>,
 
-        #[structopt(long = "replace", short = "r")]
-        /// replaces files/folders if they already exist
+        #[structopt(
+            long = "replace",
+            short = "r",
+            help = "Replaces files/folders if they already exist"
+        )]
         replace: bool,
     },
 }
