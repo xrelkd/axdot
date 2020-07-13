@@ -2,10 +2,7 @@ use std::path::PathBuf;
 
 use structopt::{clap::Shell, StructOpt};
 
-use crate::config::Config;
-use crate::context::Context;
-use crate::error::Error;
-use crate::manager::Manager;
+use crate::{config::Config, context::Context, error::Error, manager::Manager};
 
 #[derive(Debug, StructOpt)]
 pub struct Command {
@@ -14,10 +11,10 @@ pub struct Command {
 }
 
 impl Command {
+    pub fn new() -> Command { Command::from_args() }
+
     #[inline]
-    pub fn app_name() -> String {
-        Command::clap().get_name().to_owned()
-    }
+    pub fn app_name() -> String { Command::clap().get_name().to_owned() }
 
     pub fn run(self) -> Result<(), Error> {
         let context =
@@ -69,7 +66,7 @@ impl SubCommand {
 
     fn create_manager(config: Option<PathBuf>) -> Result<Manager, Error> {
         let config_file = config.unwrap_or(PathBuf::from(format!("{}.yaml", Command::app_name())));
-        Ok(Config::from_file(config_file)?.into())
+        Ok(Config::load(config_file)?.into())
     }
 
     pub fn run(self, context: Option<Context>) -> Result<(), Error> {
@@ -87,7 +84,7 @@ impl SubCommand {
             }
             (SubCommand::Init, _) => {
                 let config = Config::default();
-                println!("{}", serde_yaml::to_string(&config)?);
+                println!("{}", serde_yaml::to_string(&config).expect("Config is serializable"));
                 Ok(())
             }
             (SubCommand::Apply { replace, config }, Some(context)) => {

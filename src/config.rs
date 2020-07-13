@@ -1,5 +1,7 @@
-use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -22,12 +24,16 @@ pub struct Config {
 impl Config {
     #[inline]
     pub fn from_str(s: &str) -> Result<Config, Error> {
-        Ok(serde_yaml::from_str(s)?)
+        let content =
+            serde_yaml::from_str(s).map_err(|source| Error::ParseYamlConfig { source })?;
+        Ok(content)
     }
 
     #[inline]
-    pub fn from_file<P: AsRef<Path>>(config_file: P) -> Result<Config, Error> {
-        let data = std::fs::read_to_string(config_file)?;
+    pub fn load<P: AsRef<Path>>(config_file: P) -> Result<Config, Error> {
+        let data = std::fs::read_to_string(&config_file).map_err(|source| {
+            Error::ReadConfigFile { source, file_path: config_file.as_ref().to_owned() }
+        })?;
         Ok(Self::from_str(&data)?)
     }
 }

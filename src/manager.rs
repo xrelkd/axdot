@@ -1,9 +1,9 @@
-use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
-use crate::config::Config;
-use crate::context::Context;
-use crate::error::Error;
+use crate::{config::Config, context::Context, error::Error};
 
 pub struct Manager {
     directories: Vec<PathBuf>,
@@ -34,13 +34,7 @@ impl Manager {
         copys: HashMap<PathBuf, PathBuf>,
         commands: Vec<Vec<String>>,
     ) -> Manager {
-        Manager {
-            directories,
-            empty_files,
-            links,
-            copys,
-            commands,
-        }
+        Manager { directories, empty_files, links, copys, commands }
     }
 
     pub fn apply(&self, dry: bool, replace: bool, context: &Context) -> Result<(), Error> {
@@ -81,7 +75,8 @@ mod helpers {
 
         println!("{}", prompt);
         for line in stdin.lock().lines() {
-            match line?.trim().to_lowercase().as_ref() {
+            let line = line.map_err(|source| Error::ReadStandardInput { source })?;
+            match line.trim().to_lowercase().as_ref() {
                 "yes" | "y" => return Ok(true),
                 "no" | "n" => return Ok(false),
                 _ => {
@@ -92,7 +87,7 @@ mod helpers {
             }
         }
 
-        Err(Error::StandardInput)
+        Ok(false)
     }
 
     pub fn copy<S: AsRef<Path>, D: AsRef<Path>>(
@@ -102,7 +97,9 @@ mod helpers {
         src: &S,
         dest: &D,
     ) -> Result<(), Error> {
-        let src = context.apply_path(src).canonicalize()?;
+        let src = context.apply_path(src).canonicalize().map_err(|source| {
+            Error::CanonicalizePath { path: src.as_ref().to_path_buf(), source }
+        })?;
         let dest = context.apply_path(dest);
 
         if dest.exists() {
@@ -120,9 +117,14 @@ mod helpers {
         }
 
         if src.is_file() {
-            std::fs::copy(src, dest)?;
+            std::fs::copy(&src, &dest).map_err(|source| Error::CopyFile {
+                source,
+                copy_source: src.to_path_buf(),
+                copy_destination: dest.to_path_buf(),
+            })?;
         } else {
-            std::fs::create_dir_all(&src)?;
+            std::fs::create_dir_all(&src)
+                .map_err(|source| Error::CreateDirectory { source, dir_path: src.to_path_buf() })?;
 
             let options = fs_extra::dir::CopyOptions {
                 overwrite: true,
@@ -131,7 +133,11 @@ mod helpers {
                 copy_inside: true,
                 depth: 0,
             };
-            fs_extra::dir::copy(src, dest, &options)?;
+            fs_extra::dir::copy(&src, &dest, &options).map_err(|source| Error::CopyDirectory {
+                source,
+                copy_source: src.to_path_buf(),
+                copy_destination: dest.to_path_buf(),
+            })?;
         }
 
         Ok(())
@@ -144,7 +150,9 @@ mod helpers {
         src: &S,
         dest: &D,
     ) -> std::result::Result<(), Error> {
-        let src = context.apply_path(src).canonicalize()?;
+        let src = context.apply_path(src).canonicalize().map_err(|source| {
+            Error::CanonicalizePath { source, path: src.as_ref().to_path_buf() }
+        })?;
         let dest = context.apply_path(dest);
 
         println!("Linking {:?} -> {:?}", dest, src);
@@ -166,7 +174,11 @@ mod helpers {
             Err(_err) => {}
         }
 
-        Ok(std::os::unix::fs::symlink(src, dest)?)
+        Ok(std::os::unix::fs::symlink(&src, &dest).map_err(|source| Error::CreateSymbolLink {
+            source,
+            link_source: src.to_path_buf(),
+            link_destination: dest.to_path_buf(),
+        })?)
     }
 
     pub fn create_directory<P: AsRef<Path>>(
@@ -184,7 +196,8 @@ mod helpers {
         if path.is_dir() {
             println!("Skipping existing {:?}", path);
         } else {
-            std::fs::create_dir_all(path)?;
+            std::fs::create_dir_all(&path)
+                .map_err(|source| Error::CreateDirectory { source, dir_path: path.to_owned() })?;
         }
 
         Ok(())
@@ -196,10 +209,9 @@ mod helpers {
             return Ok(());
         }
 
-        std::fs::OpenOptions::new()
-            .write(true)
-            .create(true)
-            .open(path)?;
+        std::fs::OpenOptions::new().write(true).create(true).open(&path).map_err(|source| {
+            Error::CreateEmptyFile { source, file_path: path.as_ref().to_owned() }
+        })?;
 
         Ok(())
     }
@@ -231,9 +243,11 @@ mod helpers {
 
         let path = path.as_ref();
         if path.is_file() || path.read_link().is_ok() {
-            std::fs::remove_file(path)?;
+            std::fs::remove_file(path)
+                .map_err(|source| Error::RemoveFile { source, file_path: path.to_owned() })?;
         } else {
-            std::fs::remove_dir_all(path)?;
+            std::fs::remove_dir_all(path)
+                .map_err(|source| Error::RemoveDirectory { source, dir_path: path.to_owned() })?;
         }
 
         Ok(())
@@ -248,8 +262,14 @@ mod helpers {
 
         std::process::Command::new(command)
             .args(args)
-            .spawn()?
-            .wait_with_output()?;
+            .spawn()
+            .map_err(|source| Error::SpawnExternalCommand {
+                source,
+                command: command.to_owned(),
+                args: args.iter().map(String::to_owned).collect(),
+            })?
+            .wait_with_output()
+            .map_err(|source| Error::WaitForSpawnedProcess { source })?;
 
         Ok(())
     }
