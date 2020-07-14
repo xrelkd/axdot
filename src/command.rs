@@ -71,7 +71,8 @@ impl SubCommand {
     }
 
     fn create_manager(config: Option<PathBuf>) -> Result<Manager, Error> {
-        let config_file = config.unwrap_or(PathBuf::from(format!("{}.yaml", Command::app_name())));
+        let config_file =
+            config.unwrap_or_else(|| PathBuf::from(format!("{}.yaml", Command::app_name())));
         Ok(Config::load(config_file)?.into())
     }
 

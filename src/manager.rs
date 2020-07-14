@@ -225,10 +225,10 @@ mod helpers {
         let path = context.apply_path(&path);
         let dir_path = path.parent().unwrap();
 
-        if path.exists() {
-            if replace || helpers::ask_user(&format!("{:?} exist, delete it? [Y/n]", &path))? {
-                helpers::remove_all(dry, &path)?;
-            }
+        if path.exists()
+            && (replace || helpers::ask_user(&format!("{:?} exist, delete it? [Y/n]", &path))?)
+        {
+            helpers::remove_all(dry, &path)?;
         }
 
         helpers::create_directory(dry, context, &dir_path)?;
