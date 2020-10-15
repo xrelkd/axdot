@@ -64,10 +64,7 @@ pub enum SubCommand {
 impl SubCommand {
     #[inline]
     pub fn is_standalone(&self) -> bool {
-        match self {
-            SubCommand::Version | SubCommand::Completions { .. } => true,
-            _ => false,
-        }
+        matches!(self, SubCommand::Version | SubCommand::Completions { .. })
     }
 
     fn create_manager(config: Option<PathBuf>) -> Result<Manager, Error> {

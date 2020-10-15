@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use snafu::Snafu;
 
 #[derive(Debug, Snafu)]
+#[snafu(visibility = "pub(crate)")]
 pub enum Error {
     #[snafu(display("Failed to get USER name from environment variable"))]
     EnvUserNotFound,

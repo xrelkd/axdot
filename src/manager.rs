@@ -3,7 +3,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{config::Config, context::Context, error::Error};
+use snafu::ResultExt;
+
+use crate::{config::Config, context::Context, error, error::Error};
 
 pub struct Manager {
     directories: Vec<PathBuf>,
@@ -42,8 +44,8 @@ impl Manager {
             helpers::create_directory(dry, context, dir)?;
         }
 
-        for file in &self.empty_files {
-            helpers::create_file(dry, replace, context, file)?;
+        for empty_file in &self.empty_files {
+            helpers::create_file(dry, replace, context, empty_file)?;
         }
 
         for (src, dest) in &self.links {
@@ -59,6 +61,7 @@ impl Manager {
                 Some((prog, args)) => (prog, args),
                 None => return Err(Error::NoCommandProvided),
             };
+
             helpers::execute_command(dry, program, args)?;
         }
 
@@ -75,7 +78,7 @@ mod helpers {
 
         println!("{}", prompt);
         for line in stdin.lock().lines() {
-            let line = line.map_err(|source| Error::ReadStandardInput { source })?;
+            let line = line.context(error::ReadStandardInput)?;
             match line.trim().to_lowercase().as_ref() {
                 "yes" | "y" => return Ok(true),
                 "no" | "n" => return Ok(false),
@@ -97,34 +100,39 @@ mod helpers {
         src: &S,
         dest: &D,
     ) -> Result<(), Error> {
-        let src = context.apply_path(src).canonicalize().map_err(|source| {
-            Error::CanonicalizePath { path: src.as_ref().to_path_buf(), source }
-        })?;
-        let dest = context.apply_path(dest);
+        let copy_source = context
+            .apply_path(src)
+            .canonicalize()
+            .context(error::CanonicalizePath { path: src.as_ref().to_path_buf() })?;
+        let copy_destination = context.apply_path(dest);
 
-        if dest.exists() {
-            if replace || helpers::ask_user(&format!("{:?} exists, delete it? [Y/n]", dest))? {
-                println!("Removing {:?}", dest);
-                helpers::remove_all(dry, &dest)?;
+        if copy_destination.exists() {
+            if replace
+                || helpers::ask_user(&format!(
+                    "{} exists, delete it? [Y/n]",
+                    copy_destination.display()
+                ))?
+            {
+                println!("Removing {}", copy_destination.display());
+                helpers::remove_all(dry, &copy_destination)?;
             } else {
                 return Ok(());
             }
         }
 
-        println!("Copying {:?} -> {:?}", src, dest);
+        println!("Copying {} -> {}", copy_source.display(), copy_destination.display());
         if dry {
             return Ok(());
         }
 
-        if src.is_file() {
-            std::fs::copy(&src, &dest).map_err(|source| Error::CopyFile {
-                source,
-                copy_source: src.to_path_buf(),
-                copy_destination: dest.to_path_buf(),
-            })?;
+        if copy_source.is_file() {
+            std::fs::copy(&copy_source, &copy_destination)
+                .context(error::CopyFile { copy_source, copy_destination })?;
         } else {
-            std::fs::create_dir_all(&src)
-                .map_err(|source| Error::CreateDirectory { source, dir_path: src.to_path_buf() })?;
+            if let Some(dest_parent) = copy_destination.parent() {
+                std::fs::create_dir_all(&dest_parent)
+                    .context(error::CreateDirectory { dir_path: dest_parent.to_path_buf() })?;
+            }
 
             let options = fs_extra::dir::CopyOptions {
                 overwrite: true,
@@ -133,11 +141,9 @@ mod helpers {
                 copy_inside: true,
                 depth: 0,
             };
-            fs_extra::dir::copy(&src, &dest, &options).map_err(|source| Error::CopyDirectory {
-                source,
-                copy_source: src.to_path_buf(),
-                copy_destination: dest.to_path_buf(),
-            })?;
+
+            fs_extra::dir::copy(&copy_source, &copy_destination, &options)
+                .context(error::CopyDirectory { copy_source, copy_destination })?;
         }
 
         Ok(())
@@ -150,35 +156,35 @@ mod helpers {
         src: &S,
         dest: &D,
     ) -> std::result::Result<(), Error> {
-        let src = context.apply_path(src).canonicalize().map_err(|source| {
-            Error::CanonicalizePath { source, path: src.as_ref().to_path_buf() }
-        })?;
-        let dest = context.apply_path(dest);
+        let link_source = context
+            .apply_path(src)
+            .canonicalize()
+            .context(error::CanonicalizePath { path: src.as_ref().to_path_buf() })?;
+        let link_destination = context.apply_path(dest);
 
-        println!("Linking {:?} -> {:?}", dest, src);
+        println!("Linking {} -> {}", link_destination.display(), link_source.display());
 
         if dry {
             return Ok(());
         }
 
-        match dest.read_link() {
-            Ok(dest) if dest == src => {
-                println!("Skipping existing {:?} -> {:?}", dest, src);
+        match link_destination.read_link() {
+            Ok(dest) if dest == link_source => {
+                println!("Skipping existing {} -> {}", dest.display(), link_source.display());
                 return Ok(());
             }
             Ok(dest) => {
-                if replace || helpers::ask_user(&format!("{:?} exists, delete it? [Y/n]", dest))? {
+                if replace
+                    || helpers::ask_user(&format!("{} exists, delete it? [Y/n]", dest.display()))?
+                {
                     helpers::remove_all(dry, &dest)?;
                 }
             }
             Err(_err) => {}
         }
 
-        Ok(std::os::unix::fs::symlink(&src, &dest).map_err(|source| Error::CreateSymbolLink {
-            source,
-            link_source: src.to_path_buf(),
-            link_destination: dest.to_path_buf(),
-        })?)
+        Ok(std::os::unix::fs::symlink(&link_source, &link_destination)
+            .context(error::CreateSymbolLink { link_source, link_destination })?)
     }
 
     pub fn create_directory<P: AsRef<Path>>(
@@ -186,32 +192,35 @@ mod helpers {
         context: &Context,
         path: P,
     ) -> Result<(), Error> {
-        let path = context.apply_path(path);
+        let dir_path = context.apply_path(path);
 
-        println!("Creating {:?}", path);
+        println!("Creating {}", dir_path.display());
         if dry {
             return Ok(());
         }
 
-        if path.is_dir() {
-            println!("Skipping existing {:?}", path);
+        if dir_path.is_dir() {
+            println!("Skipping existing {}", dir_path.display());
         } else {
-            std::fs::create_dir_all(&path)
-                .map_err(|source| Error::CreateDirectory { source, dir_path: path.to_owned() })?;
+            std::fs::create_dir_all(&dir_path).context(error::CreateDirectory { dir_path })?;
         }
 
         Ok(())
     }
 
     pub fn create_empty_file<P: AsRef<Path>>(dry: bool, path: P) -> Result<(), Error> {
-        println!("Creating empty file {:?}", path.as_ref().to_string_lossy());
+        let file_path = path.as_ref();
+
+        println!("Creating empty file {}", file_path.display());
         if dry {
             return Ok(());
         }
 
-        std::fs::OpenOptions::new().write(true).create(true).open(&path).map_err(|source| {
-            Error::CreateEmptyFile { source, file_path: path.as_ref().to_owned() }
-        })?;
+        std::fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(&path)
+            .context(error::CreateEmptyFile { file_path: file_path.to_owned() })?;
 
         Ok(())
     }
@@ -226,7 +235,8 @@ mod helpers {
         let dir_path = path.parent().unwrap();
 
         if path.exists()
-            && (replace || helpers::ask_user(&format!("{:?} exist, delete it? [Y/n]", &path))?)
+            && (replace
+                || helpers::ask_user(&format!("{} exist, delete it? [Y/n]", path.display()))?)
         {
             helpers::remove_all(dry, &path)?;
         }
@@ -243,11 +253,10 @@ mod helpers {
 
         let path = path.as_ref();
         if path.is_file() || path.read_link().is_ok() {
-            std::fs::remove_file(path)
-                .map_err(|source| Error::RemoveFile { source, file_path: path.to_owned() })?;
+            std::fs::remove_file(path).context(error::RemoveFile { file_path: path.to_owned() })?;
         } else {
             std::fs::remove_dir_all(path)
-                .map_err(|source| Error::RemoveDirectory { source, dir_path: path.to_owned() })?;
+                .context(error::RemoveDirectory { dir_path: path.to_owned() })?;
         }
 
         Ok(())
@@ -263,13 +272,12 @@ mod helpers {
         std::process::Command::new(command)
             .args(args)
             .spawn()
-            .map_err(|source| Error::SpawnExternalCommand {
-                source,
+            .context(error::SpawnExternalCommand {
                 command: command.to_owned(),
-                args: args.iter().map(String::to_owned).collect(),
+                args: args.to_vec(),
             })?
             .wait_with_output()
-            .map_err(|source| Error::WaitForSpawnedProcess { source })?;
+            .context(error::WaitForSpawnedProcess)?;
 
         Ok(())
     }
