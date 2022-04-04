@@ -3,10 +3,21 @@ name = "axdot"
 version = "0.2.0"
 authors = ["xrelkd 46590321+xrelkd@users.noreply.github.com"]
 edition = "2021"
+license = "GPL-3.0"
+license_file = "LICENSE"
+repository = "https://github.com/xrelkd/axdot"
+description = "Axdot"
+keywords = ["dotfiles"]
+categories = ["accessibility"]
+readme = "README.md"
 
 [dependencies]
 fs_extra = "1"
+
 serde = { version = "1", features = ["derive"] }
 serde_yaml = "0.8"
-snafu = "0.6"
-structopt = "0.3"
+
+clap = { version = "3", features = ["derive", "env"] }
+clap_complete = "3"
+snafu = "0.7"
+
