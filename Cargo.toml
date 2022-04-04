@@ -8,5 +8,5 @@ edition = "2021"
 fs_extra = "1"
 serde = { version = "1", features = ["derive"] }
 serde_yaml = "0.8"
-snafu = "0.6"
+snafu = "0.7"
 structopt = "0.3"
