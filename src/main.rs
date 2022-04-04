@@ -4,6 +4,11 @@ mod context;
 mod error;
 mod manager;
 
-use self::{command::Command, error::Result};
+use self::command::Cli;
 
-fn main() -> Result<()> { Command::new().run() }
+fn main() {
+    if let Err(err) = Cli::default().run() {
+        eprintln!("{err}");
+        std::process::exit(-1);
+    }
+}

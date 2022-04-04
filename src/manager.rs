@@ -133,6 +133,7 @@ mod helpers {
                 skip_exist: true,
                 buffer_size: 64000,
                 copy_inside: true,
+                content_only: false,
                 depth: 0,
             };
 
