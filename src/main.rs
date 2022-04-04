@@ -4,6 +4,6 @@ mod context;
 mod error;
 mod manager;
 
-use self::{command::Command, error::Error};
+use self::{command::Command, error::Result};
 
-fn main() -> Result<(), Error> { Command::new().run() }
+fn main() -> Result<()> { Command::new().run() }

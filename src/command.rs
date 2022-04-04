@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use structopt::{clap::Shell, StructOpt};
 
-use crate::{config::Config, context::Context, error::Error, manager::Manager};
+use crate::{config::Config, context::Context, error::Result, manager::Manager};
 
 #[derive(Debug, StructOpt)]
 pub struct Command {
@@ -16,7 +16,7 @@ impl Command {
     #[inline]
     pub fn app_name() -> String { Command::clap().get_name().to_owned() }
 
-    pub fn run(self) -> Result<(), Error> {
+    pub fn run(self) -> Result<()> {
         let context =
             if self.subcommand.is_standalone() { None } else { Some(Context::from_env()?) };
         self.subcommand.run(context)
@@ -67,13 +67,16 @@ impl SubCommand {
         matches!(self, SubCommand::Version | SubCommand::Completions { .. })
     }
 
-    fn create_manager(config: Option<PathBuf>) -> Result<Manager, Error> {
+    fn create_manager(config: Option<PathBuf>) -> Result<Manager> {
         let config_file =
             config.unwrap_or_else(|| PathBuf::from(format!("{}.yaml", Command::app_name())));
-        Ok(Config::load(config_file)?.into())
+
+        let config = Config::load(config_file)?;
+
+        Ok(Manager::from(config))
     }
 
-    pub fn run(self, context: Option<Context>) -> Result<(), Error> {
+    pub fn run(self, context: Option<Context>) -> Result<()> {
         match (self, context) {
             (SubCommand::Version, _) => {
                 Command::clap()

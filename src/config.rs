@@ -6,14 +6,14 @@ use std::{
 use serde::{Deserialize, Serialize};
 use snafu::ResultExt;
 
-use crate::error::{self, Error};
+use crate::{error, error::Result};
 
-#[derive(Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub struct SymbolLink {
     path: PathBuf,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Config {
     pub commands: Vec<Vec<String>>,
     pub directories: Vec<PathBuf>,
@@ -24,16 +24,19 @@ pub struct Config {
 
 impl Config {
     #[inline]
-    pub fn from_str(s: &str) -> Result<Config, Error> {
-        let content = serde_yaml::from_str(s).context(error::ParseYamlConfig)?;
-        Ok(content)
+    pub fn from_yaml(s: &str) -> Result<Config> {
+        serde_yaml::from_str(s).context(error::ParseYamlConfigSnafu)
     }
 
     #[inline]
-    pub fn load<P: AsRef<Path>>(config_file: P) -> Result<Config, Error> {
+    pub fn load<P>(config_file: P) -> Result<Config>
+    where
+        P: AsRef<Path>,
+    {
         let config_file = config_file.as_ref();
         let data = std::fs::read_to_string(config_file)
-            .context(error::ReadConfigFile { file_path: config_file.to_owned() })?;
-        Ok(Self::from_str(&data)?)
+            .context(error::ReadConfigFileSnafu { file_path: config_file.to_owned() })?;
+
+        Self::from_yaml(&data)
     }
 }
