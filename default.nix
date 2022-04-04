@@ -5,7 +5,7 @@
 
 rustPlatform.buildRustPackage rec {
   pname = "axdot";
-  version = "0.2.1";
+  version = "0.3.0";
 
   src = lib.cleanSource ./.;
 
