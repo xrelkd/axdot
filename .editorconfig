@@ -1,5 +1,3 @@
-# EditorConfig is awesome: https://EditorConfig.org
-
 # top-most EditorConfig file
 root = true
 
@@ -15,19 +13,12 @@ indent_style = space
 # Two-space indentation
 indent_size = 2
 # Trim trailing whitespace
-trim_trailing_whitespace = true
+trim_trailing_whitespace = false
 # Max line length
 max_line_length=100
 
-[.travis.yml]
-# Soft tabs
-indent_style=space
-# Two-space indentation
-indent_size=2
-# Tab width
-tab_width=8
+[*.rs]
+indent_size = 4
 
 [justfile]
-# Use tabs in justfile
 indent_style = tab
-
