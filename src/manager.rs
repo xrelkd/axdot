@@ -1,11 +1,6 @@
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-};
+use std::{collections::HashMap, path::PathBuf};
 
-use snafu::ResultExt;
-
-use crate::{config::Config, context::Context, error, error::Error};
+use crate::{config::Config, context::Context, error::Error};
 
 pub struct Manager {
     directories: Vec<PathBuf>,
@@ -16,8 +11,8 @@ pub struct Manager {
 }
 
 impl From<Config> for Manager {
-    fn from(Config { directories, empty_files, links, copies, commands }: Config) -> Manager {
-        Manager { directories, empty_files, links, copies, commands }
+    fn from(Config { directories, empty_files, links, copies, commands }: Config) -> Self {
+        Self { directories, empty_files, links, copies, commands }
     }
 }
 
@@ -29,8 +24,8 @@ impl Manager {
         links: HashMap<PathBuf, PathBuf>,
         copies: HashMap<PathBuf, PathBuf>,
         commands: Vec<Vec<String>>,
-    ) -> Manager {
-        Manager { directories, empty_files, links, copies, commands }
+    ) -> Self {
+        Self { directories, empty_files, links, copies, commands }
     }
 
     pub fn apply(&self, dry: bool, replace: bool, context: &Context) -> Result<(), Error> {
@@ -64,9 +59,16 @@ impl Manager {
 }
 
 mod helpers {
-    use super::*;
+    use std::{fmt, path::Path};
 
-    pub fn ask_user(prompt: &str) -> Result<bool, Error> {
+    use snafu::ResultExt;
+
+    use crate::{context::Context, error, error::Result};
+
+    pub fn ask_user<S>(prompt: S) -> Result<bool>
+    where
+        S: fmt::Display,
+    {
         use std::io::BufRead;
         let stdin = std::io::stdin();
 
@@ -78,7 +80,7 @@ mod helpers {
                 "no" | "n" => return Ok(false),
                 _ => {
                     eprintln!("Enter a correct choice.");
-                    println!("{}", prompt);
+                    println!("{prompt}");
                     continue;
                 }
             }
@@ -87,28 +89,22 @@ mod helpers {
         Ok(false)
     }
 
-    pub fn copy<S: AsRef<Path>, D: AsRef<Path>>(
-        dry: bool,
-        replace: bool,
-        context: &Context,
-        src: &S,
-        dest: &D,
-    ) -> Result<(), Error> {
+    pub fn copy<S, D>(dry: bool, replace: bool, context: &Context, src: S, dest: D) -> Result<()>
+    where
+        S: AsRef<Path>,
+        D: AsRef<Path>,
+    {
         let copy_source = context
-            .apply_path(src)
+            .apply_path(&src)
             .canonicalize()
             .context(error::CanonicalizePathSnafu { path: src.as_ref().to_path_buf() })?;
         let copy_destination = context.apply_path(dest);
 
+        let prompt = format!("`{}` exists, delete it? [Y/n]", copy_destination.display());
         if copy_destination.exists() {
-            if replace
-                || helpers::ask_user(&format!(
-                    "`{}` exists, delete it? [Y/n]",
-                    copy_destination.display()
-                ))?
-            {
+            if replace || self::ask_user(&prompt)? {
                 println!("Removing `{}`", copy_destination.display());
-                helpers::remove_all(dry, &copy_destination)?;
+                self::remove_all(dry, &copy_destination)?;
             } else {
                 return Ok(());
             }
@@ -144,15 +140,19 @@ mod helpers {
         Ok(())
     }
 
-    pub fn create_symlink<S: AsRef<Path>, D: AsRef<Path>>(
+    pub fn create_symlink<S, D>(
         dry: bool,
         replace: bool,
         context: &Context,
-        src: &S,
-        dest: &D,
-    ) -> std::result::Result<(), Error> {
+        src: S,
+        dest: D,
+    ) -> Result<()>
+    where
+        S: AsRef<Path>,
+        D: AsRef<Path>,
+    {
         let link_source = context
-            .apply_path(src)
+            .apply_path(&src)
             .canonicalize()
             .context(error::CanonicalizePathSnafu { path: src.as_ref().to_path_buf() })?;
         let link_destination = context.apply_path(dest);
@@ -169,10 +169,9 @@ mod helpers {
                 return Ok(());
             }
             Ok(dest) => {
-                if replace
-                    || helpers::ask_user(&format!("`{}` exists, delete it? [Y/n]", dest.display()))?
-                {
-                    helpers::remove_all(dry, &dest)?;
+                let prompt = format!("`{}` exists, delete it? [Y/n]", dest.display());
+                if replace || self::ask_user(&prompt)? {
+                    self::remove_all(dry, &dest)?;
                 }
             }
             Err(_err) => {}
@@ -184,11 +183,10 @@ mod helpers {
         Ok(())
     }
 
-    pub fn create_directory<P: AsRef<Path>>(
-        dry: bool,
-        context: &Context,
-        path: P,
-    ) -> Result<(), Error> {
+    pub fn create_directory<P>(dry: bool, context: &Context, path: P) -> Result<()>
+    where
+        P: AsRef<Path>,
+    {
         let dir_path = context.apply_path(path);
 
         println!("Creating `{}`", dir_path.display());
@@ -205,7 +203,10 @@ mod helpers {
         Ok(())
     }
 
-    pub fn create_empty_file<P: AsRef<Path>>(dry: bool, path: P) -> Result<(), Error> {
+    pub fn create_empty_file<P>(dry: bool, path: P) -> Result<()>
+    where
+        P: AsRef<Path>,
+    {
         let file_path = path.as_ref();
 
         println!("Creating empty file `{}`", file_path.display());
@@ -222,28 +223,28 @@ mod helpers {
         Ok(())
     }
 
-    pub fn create_file<P: AsRef<Path>>(
-        dry: bool,
-        replace: bool,
-        context: &Context,
-        path: P,
-    ) -> Result<(), Error> {
+    pub fn create_file<P>(dry: bool, replace: bool, context: &Context, path: P) -> Result<()>
+    where
+        P: AsRef<Path>,
+    {
         let path = context.apply_path(&path);
         let dir_path = path.parent().unwrap();
 
-        if path.exists()
-            && (replace
-                || helpers::ask_user(&format!("`{}` exist, delete it? [Y/n]", path.display()))?)
-        {
-            helpers::remove_all(dry, &path)?;
+        let prompt = format!("`{}` exist, delete it? [Y/n]", path.display());
+        if path.exists() && (replace || self::ask_user(&prompt)?) {
+            self::remove_all(dry, &path)?;
         }
 
-        helpers::create_directory(dry, context, &dir_path)?;
-        helpers::create_empty_file(dry, &path)?;
+        self::create_directory(dry, context, &dir_path)?;
+        self::create_empty_file(dry, &path)?;
+
         Ok(())
     }
 
-    pub fn remove_all<P: AsRef<Path>>(dry: bool, path: P) -> Result<(), Error> {
+    pub fn remove_all<P>(dry: bool, path: P) -> Result<()>
+    where
+        P: AsRef<Path>,
+    {
         if dry {
             return Ok(());
         }
@@ -260,7 +261,7 @@ mod helpers {
         Ok(())
     }
 
-    pub fn execute_command(dry: bool, command: &str, args: &[String]) -> Result<(), Error> {
+    pub fn execute_command(dry: bool, command: &str, args: &[String]) -> Result<()> {
         println!("Executing `{command} {}`", args.join(" "));
 
         if dry {

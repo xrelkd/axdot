@@ -14,7 +14,7 @@ pub struct Cli {
 
 impl Default for Cli {
     #[inline]
-    fn default() -> Cli { Self::parse() }
+    fn default() -> Self { Self::parse() }
 }
 
 impl Cli {
@@ -103,5 +103,7 @@ pub enum Commands {
 
 impl Commands {
     #[inline]
-    pub fn is_standalone(&self) -> bool { matches!(self, Self::Version | Self::Completions { .. }) }
+    pub const fn is_standalone(&self) -> bool {
+        matches!(self, Self::Version | Self::Completions { .. })
+    }
 }

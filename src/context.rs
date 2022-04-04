@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+    fmt,
+    path::{Path, PathBuf},
+};
 
 use snafu::ResultExt;
 
@@ -12,16 +15,19 @@ pub struct Context {
 
 impl Context {
     #[inline]
-    pub fn from_env() -> Result<Context> {
+    pub fn from_env() -> Result<Self> {
         let user_name = std::env::var("USER").context(error::EnvUserNotFoundSnafu)?;
         let home_dir = std::env::var("HOME").context(error::EnvUserNotFoundSnafu)?;
 
-        Ok(Context { user_name, home_dir })
+        Ok(Self { user_name, home_dir })
     }
 
     #[inline]
-    pub fn apply(&self, s: &str) -> String {
-        s.replace("$USER", &self.user_name).replace("$HOME", &self.home_dir)
+    pub fn apply<S>(&self, s: S) -> String
+    where
+        S: fmt::Display,
+    {
+        s.to_string().replace("$USER", &self.user_name).replace("$HOME", &self.home_dir)
     }
 
     #[inline]
