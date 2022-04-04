@@ -22,16 +22,22 @@ pub enum Error {
     #[snafu(display("Could not read configuration file `{}`, error: {source}", file_path.display()))]
     ReadConfigFile { file_path: PathBuf, source: std::io::Error },
 
-    #[snafu(display("Could not copy file `{}` -> `{}`, error: {source}",
-            copy_source.display(), copy_destination.display()))]
+    #[snafu(
+        display("Could not copy folder `{}` -> `{}`, error: {source}",
+            copy_source.display(), copy_destination.display()
+        )
+    )]
     CopyDirectory {
         copy_source: PathBuf,
         copy_destination: PathBuf,
         source: fs_extra::error::Error,
     },
 
-    #[snafu(display("Could not copy file `{}` -> `{}`, error: {source}",
-            copy_source.display(), copy_destination.display()  ))]
+    #[snafu(
+        display("Could not copy file `{}` -> `{}`, error: {source}",
+            copy_source.display(), copy_destination.display()
+        )
+    )]
     CopyFile { copy_source: PathBuf, copy_destination: PathBuf, source: std::io::Error },
 
     #[snafu(display("Could not remove file `{}`, error: {source}", file_path.display()))]
