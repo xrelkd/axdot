@@ -14,6 +14,7 @@ pub struct SymbolLink {
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Config {
     pub commands: Vec<Vec<String>>,
     pub directories: Vec<PathBuf>,
