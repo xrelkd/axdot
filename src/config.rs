@@ -25,12 +25,12 @@ pub struct Config {
 
 impl Config {
     #[inline]
-    pub fn from_yaml(s: &str) -> Result<Config> {
+    pub fn from_yaml(s: &str) -> Result<Self> {
         serde_yaml::from_str(s).context(error::ParseYamlConfigSnafu)
     }
 
     #[inline]
-    pub fn load<P>(config_file: P) -> Result<Config>
+    pub fn load<P>(config_file: P) -> Result<Self>
     where
         P: AsRef<Path>,
     {
