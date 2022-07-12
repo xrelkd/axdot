@@ -65,19 +65,23 @@ mod helpers {
 
     use crate::{context::Context, error, error::Result};
 
-    pub fn ask_user<S>(prompt: S) -> Result<bool>
+    pub fn ask_user<S>(prompt: S) -> bool
     where
         S: fmt::Display,
     {
-        use std::io::BufRead;
+        println!("{prompt}");
+
+        let mut line = String::new();
         let stdin = std::io::stdin();
 
-        println!("{prompt}");
-        for line in stdin.lock().lines() {
-            let line = line.context(error::ReadStandardInputSnafu)?;
+        while let Ok(n) = stdin.read_line(&mut line) {
+            if n == 0 {
+                break;
+            }
+
             match line.trim().to_lowercase().as_ref() {
-                "yes" | "y" => return Ok(true),
-                "no" | "n" => return Ok(false),
+                "yes" | "y" => return true,
+                "no" | "n" => return false,
                 _ => {
                     eprintln!("Enter a correct choice.");
                     println!("{prompt}");
@@ -86,7 +90,7 @@ mod helpers {
             }
         }
 
-        Ok(false)
+        false
     }
 
     pub fn copy<S, D>(dry: bool, replace: bool, context: &Context, src: S, dest: D) -> Result<()>
@@ -102,7 +106,7 @@ mod helpers {
 
         let prompt = format!("`{}` exists, delete it? [Y/n]", copy_destination.display());
         if copy_destination.exists() {
-            if replace || self::ask_user(&prompt)? {
+            if replace || self::ask_user(&prompt) {
                 println!("Removing `{}`", copy_destination.display());
                 self::remove_all(dry, &copy_destination)?;
             } else {
@@ -170,7 +174,7 @@ mod helpers {
             }
             Ok(dest) => {
                 let prompt = format!("`{}` exists, delete it? [Y/n]", dest.display());
-                if replace || self::ask_user(&prompt)? {
+                if replace || self::ask_user(&prompt) {
                     self::remove_all(dry, &dest)?;
                 }
             }
@@ -231,7 +235,7 @@ mod helpers {
         let dir_path = path.parent().unwrap();
 
         let prompt = format!("`{}` exist, delete it? [Y/n]", path.display());
-        if path.exists() && (replace || self::ask_user(&prompt)?) {
+        if path.exists() && (replace || self::ask_user(&prompt)) {
             self::remove_all(dry, &path)?;
         }
 
