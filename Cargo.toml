@@ -16,7 +16,6 @@ fs_extra = "1"
 serde = { version = "1", features = ["derive"] }
 serde_yaml = "0.8"
 
-clap = { version = "3", features = ["derive", "env"] }
-clap_complete = "3"
+clap = { version = "4", features = ["derive", "env"] }
+clap_complete = "4"
 snafu = "0.7"
-
