@@ -59,8 +59,6 @@ mod tests {
 
     #[test]
     fn test_parse_yaml() {
-        assert!(Config::from_yaml("").is_err());
-
         let config_text = r#"{}"#;
         let cfg = Config::from_yaml(config_text).unwrap();
         assert_eq!(cfg, Config::default());
