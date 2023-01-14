@@ -8,6 +8,8 @@ pkgs.mkShell rec {
 
     tokei
 
+    treefmt
+
     jq
     nixpkgs-fmt
     shfmt

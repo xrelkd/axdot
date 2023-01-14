@@ -40,9 +40,9 @@ impl Context {
             .enumerate()
             .map(|(index, part)| {
                 if index == 0 && part == "~" {
-                    self.apply(&part.to_string_lossy().replace('~', &self.home_dir))
+                    self.apply(part.to_string_lossy().replace('~', &self.home_dir))
                 } else {
-                    self.apply(&part.to_string_lossy())
+                    self.apply(part.to_string_lossy())
                 }
             })
             .collect()
