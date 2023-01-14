@@ -55,7 +55,7 @@ impl Cli {
     fn create_manager(config: Option<PathBuf>) -> Result<Manager> {
         let app_name = Self::command().get_name().to_string();
 
-        let config_file = config.unwrap_or_else(|| PathBuf::from(format!("{}.yaml", app_name)));
+        let config_file = config.unwrap_or_else(|| PathBuf::from(format!("{app_name}.yaml")));
 
         let config = Config::load(config_file)?;
 

@@ -46,10 +46,7 @@ impl Manager {
         }
 
         for cmd in &self.commands {
-            let (program, args) = match cmd.split_first() {
-                Some((prog, args)) => (prog, args),
-                None => return Err(Error::NoCommandProvided),
-            };
+            let Some((program, args)) = cmd.split_first() else { return Err(Error::NoCommandProvided) };
 
             helpers::execute_command(dry, program, args)?;
         }
@@ -106,7 +103,7 @@ mod helpers {
 
         let prompt = format!("`{}` exists, delete it? [Y/n]", copy_destination.display());
         if copy_destination.exists() {
-            if replace || self::ask_user(&prompt) {
+            if replace || self::ask_user(prompt) {
                 println!("Removing `{}`", copy_destination.display());
                 self::remove_all(dry, &copy_destination)?;
             } else {
@@ -124,7 +121,7 @@ mod helpers {
                 .context(error::CopyFileSnafu { copy_source, copy_destination })?;
         } else {
             if let Some(dest_parent) = copy_destination.parent() {
-                std::fs::create_dir_all(&dest_parent)
+                std::fs::create_dir_all(dest_parent)
                     .context(error::CreateDirectorySnafu { dir_path: dest_parent.to_path_buf() })?;
             }
 
@@ -174,7 +171,7 @@ mod helpers {
             }
             Ok(dest) => {
                 let prompt = format!("`{}` exists, delete it? [Y/n]", dest.display());
-                if replace || self::ask_user(&prompt) {
+                if replace || self::ask_user(prompt) {
                     self::remove_all(dry, &dest)?;
                 }
             }
@@ -231,15 +228,15 @@ mod helpers {
     where
         P: AsRef<Path>,
     {
-        let path = context.apply_path(&path);
+        let path = context.apply_path(path);
         let dir_path = path.parent().unwrap();
 
         let prompt = format!("`{}` exist, delete it? [Y/n]", path.display());
-        if path.exists() && (replace || self::ask_user(&prompt)) {
+        if path.exists() && (replace || self::ask_user(prompt)) {
             self::remove_all(dry, &path)?;
         }
 
-        self::create_directory(dry, context, &dir_path)?;
+        self::create_directory(dry, context, dir_path)?;
         self::create_empty_file(dry, &path)?;
 
         Ok(())
