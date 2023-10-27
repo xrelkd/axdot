@@ -1,15 +1,17 @@
-{ lib
+{ name
+, version
+, lib
 , rustPlatform
 , installShellFiles
 }:
 
-rustPlatform.buildRustPackage rec {
-  pname = "axdot";
-  version = "0.3.0";
+rustPlatform.buildRustPackage {
+  pname = name;
+  inherit version;
 
-  src = lib.cleanSource ./.;
+  src = lib.cleanSource ./..;
 
-  cargoLock.lockFile = ./Cargo.lock;
+  cargoLock.lockFile = ../Cargo.lock;
 
   nativeBuildInputs = [ installShellFiles ];
 
@@ -25,4 +27,5 @@ rustPlatform.buildRustPackage rec {
     license = with licenses; [ gpl3 ];
     maintainers = with maintainers; [ xrelkd ];
   };
+
 }

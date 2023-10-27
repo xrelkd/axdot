@@ -7,23 +7,9 @@ updates:
       time: "21:00"
     open-pull-requests-limit: 10
 
-  - package-ecosystem: docker
-    directory: "/dev-support/containers/debian"
-    schedule:
-      interval: "daily"
-      time: "21:00"
-    open-pull-requests-limit: 10
-
-  - package-ecosystem: docker
-    directory: "/dev-support/containers/scratch"
-    schedule:
-      interval: "daily"
-      time: "21:00"
-    open-pull-requests-limit: 10
-
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "daily"
       time: "21:00"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 20

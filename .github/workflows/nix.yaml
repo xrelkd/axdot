@@ -3,18 +3,24 @@ name: "Nix Flakes"
 on:
   push:
     branches:
-      - ci/*
       - main
+      - ci/*
       - develop
+      - feat/*
+      - feature/*
+      - hotfix/*
       - release/*
+
   pull_request:
     paths:
+      - "*/src/**"
+      - ".github/**"
+      - "src/**"
       - Cargo.lock
       - Cargo.toml
-      - default.nix
       - flake.lock
       - flake.nix
-      - shell.nix
+      - rust-toolchain.toml
 
 jobs:
   build-nix-flake:
@@ -32,8 +38,5 @@ jobs:
       - name: Build Nix Flake
         run: nix build
 
-      - name: Check Nix Flake
-        run: nix flake check
-
-      - name: Test Axdot binary
-        run: ./result/bin/axdot version
+      - name: Test executable
+        run: ./result/bin/axdot --version

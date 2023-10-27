@@ -46,7 +46,9 @@ impl Manager {
         }
 
         for cmd in &self.commands {
-            let Some((program, args)) = cmd.split_first() else { return Err(Error::NoCommandProvided) };
+            let Some((program, args)) = cmd.split_first() else {
+                return Err(Error::NoCommandProvided);
+            };
 
             helpers::execute_command(dry, program, args)?;
         }
