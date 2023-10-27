@@ -3,14 +3,15 @@ name: Lint
 on:
   push:
     branches:
-      - ci/*
       - main
       - develop
+      - ci/*
+      - feat/*
+      - feature/*
+      - hotfix/*
       - release/*
-  pull_request:
 
-env:
-  CI: 1
+  pull_request:
 
 jobs:
   format:
@@ -24,8 +25,20 @@ jobs:
         with:
           nix_path: nixpkgs=channel:nixos-unstable
 
+      - name: Install treefmt
+        run: nix profile install 'nixpkgs#treefmt'
+
+      - name: Install prettier
+        run: nix profile install 'nixpkgs#nodePackages.prettier'
+
       - name: Install nixpkgs-fmt
         run: nix profile install 'nixpkgs#nixpkgs-fmt'
+
+      - name: Install hclfmt
+        run: nix profile install 'nixpkgs#hclfmt'
+
+      - name: Install taplo
+        run: nix profile install 'nixpkgs#taplo'
 
       - name: Run shfmt, shellcheck, checkbashisms
         uses: luizm/action-sh-checker@v0.7.0
@@ -34,21 +47,18 @@ jobs:
         with:
           sh_checker_comment: true
           sh_checker_checkbashisms_enable: true
-          sh_checker_exclude: "dev-support/bin/create-package"
 
-      - name: Run nixpkgs-fmt
+      - name: Run treefmt
         run: |
-          nixpkgs-fmt --check .
-
-      - name: Run prettier
-        uses: creyD/prettier_action@v4.3
-        with:
-          dry: true
-          prettier_options: --check **/*.{js,ts,md,json,yaml}
-
-      - name: Dump context
-        if: always()
-        uses: crazy-max/ghaction-dump-context@v2
+          treefmt \
+            --allow-missing-formatter \
+            --fail-on-change \
+            --no-cache \
+            --formatters \
+              prettier \
+              nix \
+              shell \
+              toml
 
   commit:
     name: Lint commit
@@ -59,13 +69,9 @@ jobs:
           fetch-depth: 0
 
       - name: Run commitlint
-        uses: wagoid/commitlint-github-action@v5.4.3
+        uses: wagoid/commitlint-github-action@v5.4.1
         with:
           firstParent: false
-
-      - name: Dump context
-        if: always()
-        uses: crazy-max/ghaction-dump-context@v2
 
   codespell:
     name: Codespell
@@ -76,8 +82,4 @@ jobs:
       - uses: codespell-project/codespell-problem-matcher@v1
 
       - name: Codespell
-        uses: codespell-project/actions-codespell@master
-
-      - name: Dump context
-        if: always()
-        uses: crazy-max/ghaction-dump-context@v2
+        uses: codespell-project/actions-codespell@v2
