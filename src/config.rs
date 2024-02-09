@@ -59,18 +59,18 @@ mod tests {
 
     #[test]
     fn test_parse_yaml() {
-        let config_text = r#"{}"#;
+        let config_text = r"{}";
         let cfg = Config::from_yaml(config_text).unwrap();
         assert_eq!(cfg, Config::default());
 
-        let config_text = r#"
+        let config_text = r"
 ---
 commands: []
 directories: []
 emptyFiles: []
 links: {}
 copies: {}
-"#;
+";
 
         let cfg = Config::from_yaml(config_text).unwrap();
         assert_eq!(cfg, Config::default());
@@ -100,12 +100,13 @@ copies:
                 empty_files: vec![PathBuf::from("1"), PathBuf::from("2"), PathBuf::from("3"),],
                 links: {
                     let mut m = HashMap::default();
-                    m.insert(PathBuf::from("nvim"), PathBuf::from("~/.config/nvim"));
+                    let _unused = m.insert(PathBuf::from("nvim"), PathBuf::from("~/.config/nvim"));
                     m
                 },
                 copies: {
                     let mut m = HashMap::default();
-                    m.insert(PathBuf::from("git/config"), PathBuf::from("~/.config/git/config"));
+                    let _unused = m
+                        .insert(PathBuf::from("git/config"), PathBuf::from("~/.config/git/config"));
                     m
                 },
             }
