@@ -105,9 +105,9 @@ mod helpers {
 
         let prompt = format!("`{}` exists, delete it? [Y/n]", copy_destination.display());
         if copy_destination.exists() {
-            if replace || self::ask_user(prompt) {
+            if replace || ask_user(prompt) {
                 println!("Removing `{}`", copy_destination.display());
-                self::remove_all(dry, &copy_destination)?;
+                remove_all(dry, &copy_destination)?;
             } else {
                 return Ok(());
             }
@@ -119,7 +119,7 @@ mod helpers {
         }
 
         if copy_source.is_file() {
-            std::fs::copy(&copy_source, &copy_destination)
+            let _unused = std::fs::copy(&copy_source, &copy_destination)
                 .context(error::CopyFileSnafu { copy_source, copy_destination })?;
         } else {
             if let Some(dest_parent) = copy_destination.parent() {
@@ -136,7 +136,7 @@ mod helpers {
                 depth: 0,
             };
 
-            fs_extra::dir::copy(&copy_source, &copy_destination, &options)
+            let _unused = fs_extra::dir::copy(&copy_source, &copy_destination, &options)
                 .context(error::CopyDirectorySnafu { copy_source, copy_destination })?;
         }
 
@@ -173,8 +173,8 @@ mod helpers {
             }
             Ok(dest) => {
                 let prompt = format!("`{}` exists, delete it? [Y/n]", dest.display());
-                if replace || self::ask_user(prompt) {
-                    self::remove_all(dry, &dest)?;
+                if replace || ask_user(prompt) {
+                    remove_all(dry, &dest)?;
                 }
             }
             Err(_err) => {}
@@ -217,7 +217,7 @@ mod helpers {
             return Ok(());
         }
 
-        std::fs::OpenOptions::new()
+        let _unused = std::fs::OpenOptions::new()
             .write(true)
             .create(true)
             .open(&path)
@@ -234,12 +234,12 @@ mod helpers {
         let dir_path = path.parent().unwrap();
 
         let prompt = format!("`{}` exist, delete it? [Y/n]", path.display());
-        if path.exists() && (replace || self::ask_user(prompt)) {
-            self::remove_all(dry, &path)?;
+        if path.exists() && (replace || ask_user(prompt)) {
+            remove_all(dry, &path)?;
         }
 
-        self::create_directory(dry, context, dir_path)?;
-        self::create_empty_file(dry, &path)?;
+        create_directory(dry, context, dir_path)?;
+        create_empty_file(dry, &path)?;
 
         Ok(())
     }
@@ -271,7 +271,7 @@ mod helpers {
             return Ok(());
         }
 
-        std::process::Command::new(command)
+        let _unused = std::process::Command::new(command)
             .args(args)
             .spawn()
             .context(error::SpawnExternalCommandSnafu {
