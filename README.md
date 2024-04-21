@@ -1,3 +1,3 @@
 # axdot
 
-[![CI](https://github.com/xrelkd/axdot/workflows/Rust/badge.svg)](https://github.com/xrelkd/axdot/actions)
+[![Rust](https://github.com/xrelkd/axdot/actions/workflows/rust.yaml/badge.svg)](https://github.com/xrelkd/axdot/actions/workflows/rust.yaml)
