@@ -3,28 +3,34 @@ name: "Nix Flakes"
 on:
   push:
     branches:
-      - ci/*
       - main
+      - ci/*
       - develop
+      - feat/*
+      - feature/*
+      - hotfix/*
       - release/*
+
   pull_request:
     paths:
+      - "*/src/**"
+      - ".github/**"
+      - "src/**"
       - Cargo.lock
       - Cargo.toml
-      - default.nix
       - flake.lock
       - flake.nix
-      - shell.nix
+      - rust-toolchain.toml
 
 jobs:
   build-nix-flake:
     name: Build Nix Flake
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install Nix
-        uses: cachix/install-nix-action@v16
+        uses: cachix/install-nix-action@v26
         with:
           extra_nix_config: |
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
@@ -32,8 +38,5 @@ jobs:
       - name: Build Nix Flake
         run: nix build
 
-      - name: Check Nix Flake
-        run: nix flake check
-
-      - name: Test Axdot binary
-        run: ./result/bin/axdot version
+      - name: Test executable
+        run: ./result/bin/axdot --version

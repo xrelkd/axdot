@@ -46,9 +46,8 @@ impl Manager {
         }
 
         for cmd in &self.commands {
-            let (program, args) = match cmd.split_first() {
-                Some((prog, args)) => (prog, args),
-                None => return Err(Error::NoCommandProvided),
+            let Some((program, args)) = cmd.split_first() else {
+                return Err(Error::NoCommandProvided);
             };
 
             helpers::execute_command(dry, program, args)?;
@@ -65,19 +64,23 @@ mod helpers {
 
     use crate::{context::Context, error, error::Result};
 
-    pub fn ask_user<S>(prompt: S) -> Result<bool>
+    pub fn ask_user<S>(prompt: S) -> bool
     where
         S: fmt::Display,
     {
-        use std::io::BufRead;
+        println!("{prompt}");
+
+        let mut line = String::new();
         let stdin = std::io::stdin();
 
-        println!("{prompt}");
-        for line in stdin.lock().lines() {
-            let line = line.context(error::ReadStandardInputSnafu)?;
+        while let Ok(n) = stdin.read_line(&mut line) {
+            if n == 0 {
+                break;
+            }
+
             match line.trim().to_lowercase().as_ref() {
-                "yes" | "y" => return Ok(true),
-                "no" | "n" => return Ok(false),
+                "yes" | "y" => return true,
+                "no" | "n" => return false,
                 _ => {
                     eprintln!("Enter a correct choice.");
                     println!("{prompt}");
@@ -86,7 +89,7 @@ mod helpers {
             }
         }
 
-        Ok(false)
+        false
     }
 
     pub fn copy<S, D>(dry: bool, replace: bool, context: &Context, src: S, dest: D) -> Result<()>
@@ -102,9 +105,9 @@ mod helpers {
 
         let prompt = format!("`{}` exists, delete it? [Y/n]", copy_destination.display());
         if copy_destination.exists() {
-            if replace || self::ask_user(&prompt)? {
+            if replace || ask_user(prompt) {
                 println!("Removing `{}`", copy_destination.display());
-                self::remove_all(dry, &copy_destination)?;
+                remove_all(dry, &copy_destination)?;
             } else {
                 return Ok(());
             }
@@ -116,11 +119,11 @@ mod helpers {
         }
 
         if copy_source.is_file() {
-            std::fs::copy(&copy_source, &copy_destination)
+            let _unused = std::fs::copy(&copy_source, &copy_destination)
                 .context(error::CopyFileSnafu { copy_source, copy_destination })?;
         } else {
             if let Some(dest_parent) = copy_destination.parent() {
-                std::fs::create_dir_all(&dest_parent)
+                std::fs::create_dir_all(dest_parent)
                     .context(error::CreateDirectorySnafu { dir_path: dest_parent.to_path_buf() })?;
             }
 
@@ -133,7 +136,7 @@ mod helpers {
                 depth: 0,
             };
 
-            fs_extra::dir::copy(&copy_source, &copy_destination, &options)
+            let _unused = fs_extra::dir::copy(&copy_source, &copy_destination, &options)
                 .context(error::CopyDirectorySnafu { copy_source, copy_destination })?;
         }
 
@@ -170,8 +173,8 @@ mod helpers {
             }
             Ok(dest) => {
                 let prompt = format!("`{}` exists, delete it? [Y/n]", dest.display());
-                if replace || self::ask_user(&prompt)? {
-                    self::remove_all(dry, &dest)?;
+                if replace || ask_user(prompt) {
+                    remove_all(dry, &dest)?;
                 }
             }
             Err(_err) => {}
@@ -214,9 +217,10 @@ mod helpers {
             return Ok(());
         }
 
-        std::fs::OpenOptions::new()
-            .write(true)
+        let _unused = std::fs::OpenOptions::new()
             .create(true)
+            .truncate(true)
+            .write(true)
             .open(&path)
             .context(error::CreateEmptyFileSnafu { file_path: file_path.to_owned() })?;
 
@@ -227,16 +231,16 @@ mod helpers {
     where
         P: AsRef<Path>,
     {
-        let path = context.apply_path(&path);
+        let path = context.apply_path(path);
         let dir_path = path.parent().unwrap();
 
         let prompt = format!("`{}` exist, delete it? [Y/n]", path.display());
-        if path.exists() && (replace || self::ask_user(&prompt)?) {
-            self::remove_all(dry, &path)?;
+        if path.exists() && (replace || ask_user(prompt)) {
+            remove_all(dry, &path)?;
         }
 
-        self::create_directory(dry, context, &dir_path)?;
-        self::create_empty_file(dry, &path)?;
+        create_directory(dry, context, dir_path)?;
+        create_empty_file(dry, &path)?;
 
         Ok(())
     }
@@ -268,7 +272,7 @@ mod helpers {
             return Ok(());
         }
 
-        std::process::Command::new(command)
+        let _unused = std::process::Command::new(command)
             .args(args)
             .spawn()
             .context(error::SpawnExternalCommandSnafu {

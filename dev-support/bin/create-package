@@ -27,7 +27,7 @@ echo "Creating release archive..."
 case "$OS" in
 ubuntu-latest | macos-latest)
   ARCHIVE="$DIST/$PACKAGE_NAME-$VERSION-$TARGET.tar.gz"
-  tar czf "$ARCHIVE" *
+  tar czf "$ARCHIVE" -- *
   echo "::set-output name=archive::$ARCHIVE"
   ;;
 esac

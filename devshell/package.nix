@@ -1,15 +1,24 @@
-{ lib
+{ name
+, version
+, lib
+, stdenv
 , rustPlatform
 , installShellFiles
+, darwin
 }:
 
-rustPlatform.buildRustPackage rec {
-  pname = "axdot";
-  version = "0.2.1";
+rustPlatform.buildRustPackage {
+  pname = name;
+  inherit version;
 
-  src = lib.cleanSource ./.;
+  src = lib.cleanSource ./..;
 
-  cargoLock.lockFile = ./Cargo.lock;
+  cargoLock.lockFile = ../Cargo.lock;
+
+  buildInputs = lib.optionals stdenv.isDarwin [
+    darwin.apple_sdk.frameworks.Security
+    darwin.apple_sdk.frameworks.SystemConfiguration
+  ];
 
   nativeBuildInputs = [ installShellFiles ];
 
@@ -25,4 +34,5 @@ rustPlatform.buildRustPackage rec {
     license = with licenses; [ gpl3 ];
     maintainers = with maintainers; [ xrelkd ];
   };
+
 }

@@ -3,35 +3,108 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    flake-utils = {
-      url = "github:numtide/flake-utils";
+    flake-utils.url = "github:numtide/flake-utils";
+    fenix = {
+      url = "github:nix-community/fenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    crane = {
+      url = "github:ipetkov/crane";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
+  outputs = { self, nixpkgs, flake-utils, fenix, crane }:
+    let
+      cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
+      name = "axdot";
+    in
     (flake-utils.lib.eachDefaultSystem
-
       (system:
         let
           pkgs = import nixpkgs {
             inherit system;
-            overlays = [ self.overlay ];
+            overlays = [
+              self.overlays.default
+              fenix.overlays.default
+            ];
           };
-        in
-        rec {
-          packages.axdot = pkgs.callPackage ./default.nix { };
-          defaultPackage = packages.axdot;
-          apps.axdot = flake-utils.lib.mkApp {
-            drv = packages.axdot;
-            exePath = "/bin/axdot";
-          };
-          defaultApp = apps.axdot;
-          devShell = pkgs.callPackage ./shell.nix { };
 
+          rustToolchain = with fenix.packages.${system}; combine [
+            stable.rustc
+            stable.cargo
+            stable.clippy
+            stable.rust-src
+            stable.rust-std
+
+            default.rustfmt
+          ];
+
+          rustPlatform = pkgs.makeRustPlatform {
+            cargo = rustToolchain;
+            rustc = rustToolchain;
+          };
+
+          craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
+
+          cargoArgs = [
+            "--workspace"
+            "--bins"
+            "--examples"
+            "--tests"
+            "--benches"
+            "--all-targets"
+          ];
+
+          unitTestArgs = [
+            "--workspace"
+          ];
+
+          src = craneLib.cleanCargoSource (craneLib.path ./.);
+          commonArgs = {
+            inherit src;
+          };
+          cargoArtifacts = craneLib.buildDepsOnly commonArgs;
+        in
+        {
+          formatter = pkgs.treefmt;
+
+          devShells.default = pkgs.callPackage ./devshell {
+            inherit (pkgs) darwin;
+            inherit rustToolchain cargoArgs unitTestArgs;
+          };
+
+          packages = rec {
+            default = axdot;
+            axdot = pkgs.callPackage ./devshell/package.nix {
+              inherit (pkgs) darwin;
+              inherit (cargoToml.package) version;
+              inherit name rustPlatform;
+            };
+            container = pkgs.callPackage ./devshell/container.nix {
+              inherit (cargoToml.package) version;
+              inherit name axdot;
+            };
+          };
+
+          checks = {
+            format = pkgs.callPackage ./devshell/format.nix { };
+
+            rust-build = craneLib.cargoBuild (commonArgs // {
+              inherit cargoArtifacts;
+            });
+            rust-format = craneLib.cargoFmt { inherit src; };
+            rust-clippy = craneLib.cargoClippy (commonArgs // {
+              inherit cargoArtifacts;
+              cargoClippyExtraArgs = pkgs.lib.strings.concatMapStrings (x: x + " ") cargoArgs;
+            });
+            rust-nextest = craneLib.cargoNextest (commonArgs // {
+              inherit cargoArtifacts;
+              partitions = 1;
+              partitionType = "count";
+            });
+          };
         })) // {
-      overlay = final: prev: {
-        axdot = final.callPackage ./default.nix { };
-      };
+      overlays.default = final: prev: { };
     };
 }
