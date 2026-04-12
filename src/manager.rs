@@ -18,7 +18,7 @@ impl From<Config> for Manager {
 
 impl Manager {
     #[allow(dead_code)]
-    pub fn new(
+    pub const fn new(
         directories: Vec<PathBuf>,
         empty_files: Vec<PathBuf>,
         links: HashMap<PathBuf, PathBuf>,
@@ -84,7 +84,6 @@ mod helpers {
                 _ => {
                     eprintln!("Enter a correct choice.");
                     println!("{prompt}");
-                    continue;
                 }
             }
         }

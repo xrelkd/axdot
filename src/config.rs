@@ -8,6 +8,7 @@ use snafu::ResultExt;
 
 use crate::{error, error::Result};
 
+#[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub struct SymbolLink {
     path: PathBuf,
