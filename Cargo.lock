@@ -54,7 +54,7 @@ dependencies = [
 
 [[package]]
 name = "axdot"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "clap",
  "clap_complete",
