@@ -13,12 +13,6 @@ pub enum Error {
     #[snafu(display("Failed to get `USER` name from environment variable, error: {source}"))]
     EnvUserNotFound { source: std::env::VarError },
 
-    #[snafu(display("Failed to get `HOME` from environment variable, error: {source}"))]
-    EnvHomeNotFound { source: std::env::VarError },
-
-    #[snafu(display("Failed to read standard input, error: {source}"))]
-    ReadStandardInput { source: std::io::Error },
-
     #[snafu(display("Could not read configuration file `{}`, error: {source}", file_path.display()))]
     ReadConfigFile { file_path: PathBuf, source: std::io::Error },
 
