@@ -1,11 +1,12 @@
-{ rustToolchain
-, cargoArgs
-, unitTestArgs
-, pkgs
-, lib
-, stdenv
-, darwin
-, ...
+{
+  rustToolchain,
+  cargoArgs,
+  unitTestArgs,
+  pkgs,
+  lib,
+  stdenv,
+  darwin,
+  ...
 }:
 
 let
@@ -36,8 +37,8 @@ pkgs.mkShell {
 
     jq
 
-    nixpkgs-fmt
-    nodePackages.prettier
+    nixfmt
+    prettier
     shfmt
     taplo
     treefmt
